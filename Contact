@@ -1,0 +1,88 @@
+package com.example.contacts;
+
+import java.util.ArrayList;
+
+public class Contact {
+    private String name;
+    private String address;
+    private String postalCode;
+    private String number;
+    private String notes;
+    private int colourNum;
+
+    private ArrayList <String> numbers;
+
+    public Contact(String name,String address, String postalCode, String notes, String number){
+        //here is the full constructor, base will be below
+        this.name = name;
+        this.address =  address;
+        this.postalCode = postalCode;
+        this.notes = notes;
+        this.number = number;
+        this.colourNum = (int) (Math.random()*9);
+    }
+public Contact(){
+    this.name = "empty";
+    this.address = "empty";
+    this.postalCode = "empty";
+    this.notes = "empty";
+    this.number = "empty";
+    this.colourNum = (int) (Math.random()*9);
+}
+;
+
+    public String getNumber() {
+        return number;
+    }
+
+    public void setNumber(String number) {
+        this.number = number;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public void setNotes(String notes) {
+        this.notes = notes;
+    }
+
+    public String getPostalCode() {
+        return postalCode;
+    }
+
+    public void setPostalCode(String postalCode) {
+        this.postalCode = postalCode;
+    }
+    public void setNumbers(ArrayList <String> a){
+        this.numbers = a;
+    }
+    public ArrayList<String> getNumbers(){
+        return this.numbers;
+    }
+
+    public int getColourNum() {
+        return colourNum;
+    }
+    public void setColourNum(int a){
+        this.colourNum = a;
+    }
+}
+
+

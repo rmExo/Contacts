@@ -1,0 +1,642 @@
+package com.example.contacts;
+
+
+import javafx.application.Application;
+import javafx.collections.ObservableList;
+import javafx.event.EventHandler;
+import javafx.scene.Scene;
+import javafx.scene.control.*;
+import javafx.scene.control.cell.ComboBoxTableCell;
+import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.Pane;
+import javafx.scene.paint.Color;
+import javafx.scene.text.Text;
+import javafx.stage.Stage;
+
+import java.io.*;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Scanner;
+
+
+public class Main extends Application {
+    //the middleman between user input and the csv
+    public static ArrayList <Contact> storage = new ArrayList<Contact>();
+    //for cool colour things later
+    int blue = 20;
+    int greed = 255;
+    public static void main(String[] args) throws FileNotFoundException {
+
+        Scanner sc = new Scanner(new File("/Users/robmuranaka/IdeaProjects/contacts/src/main/java/com/example/contacts/contactStorage"));
+        //taken from the same website as stated in the intoContact method, and adjusted for my purposes
+        while (sc.hasNextLine()){
+            storage.add(intoContact(sc.nextLine()));
+        }
+        launch();
+
+    }
+
+    /**
+     * literally self explanatory
+     * @throws FileNotFoundException
+     */
+    public static void readCSVintoStorage() throws FileNotFoundException {
+        Scanner sc = new Scanner(new File("/Users/robmuranaka/IdeaProjects/contacts/src/main/java/com/example/contacts/contactStorage"));
+        //taken from the same website as stated in the intoContact method, and adjusted for my purposes
+        while (sc.hasNextLine()){
+            storage.add(intoContact(sc.nextLine()));
+        }
+    }
+
+    /**
+     * turns a line of text into a contact, from the CSB file
+     * @param line
+     * @return a contact
+     */
+    public static Contact intoContact(String line){
+        //just reads a csv line, and sticks it into a contact, which is then stuck into storage
+        Contact a = new Contact();
+        ArrayList <String> b = new ArrayList<>();
+        // code taken from this beautiful website that told me how to read a csv file https://www.baeldung.com/java-csv-file-array
+        Scanner rowScanner = new Scanner(line);
+        rowScanner.useDelimiter(",");
+        while(rowScanner.hasNext()){
+            b.add(rowScanner.next());
+        }
+        System.out.println(b.size());
+        a.setName(b.get(0));
+        a.setAddress(b.get(1));
+        a.setPostalCode(b.get(2));
+        a.setNumber(b.get(3));
+        a.setNotes(b.get(4));
+
+        return a;
+    }
+
+    /**
+     * starts the main screen
+     * @param stage
+     */
+
+    public void start(Stage stage){
+        // instantiations here
+        TableView<Contact> pList = new TableView<Contact>();
+        pList.setEditable(true);
+        pList.setMinSize(800,400);
+        //cycle of observation list and making sure everything is updated
+        ObservableList <Contact> yep = pList.getItems();
+        yep.addAll(storage);
+        pList.setItems(yep);
+
+
+        // creating the column for the name data
+        TableColumn<Contact,String> nameCol = new TableColumn<Contact, String>("People you know");
+        //takes the value from the string "name"
+        nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
+        nameCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        //adds a colour
+        nameCol.setStyle("-fx-background-color: #30" + numtoHex((blue+20*storage.size())%255) + numtoHex((greed-20*storage.size())%255));
+               //listener for editing the cell
+        nameCol.setOnEditCommit(event -> {
+            if(event.getNewValue().contains(",") ){
+                nameCol.setText(event.getOldValue());
+            }
+            else{
+                //takes the edit, throws it into the CSV file in the correct place, and updates the contact in storage.
+                Contact newContact = event.getRowValue();
+                for (Contact a : storage) {
+                    if (a.equals(newContact)) {
+                        a.setName(event.getNewValue());
+                    }
+                }
+                overwriteCSV(storage); // Write changes to file
+            }
+        });
+        //adds the column to the tableview
+        pList.getColumns().add(nameCol);
+
+
+        // same as above, but for city instead
+        TableColumn<Contact,String> cityCol = new TableColumn<Contact, String>("Places they live");
+        cityCol.setCellValueFactory(new PropertyValueFactory<>("address"));
+        cityCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        cityCol.setStyle("-fx-background-color: #60" + numtoHex((blue+20*storage.size())%255) + numtoHex((greed-20*storage.size())%255));
+        cityCol.setOnEditCommit(event -> {
+            if(event.getNewValue().contains(",")){
+                cityCol.setText(event.getOldValue());
+            }
+            else {
+                Contact newContact = event.getRowValue();
+                for (Contact a : storage) {
+                    if (a.equals(newContact)) {
+                        a.setAddress(event.getNewValue());
+                    }
+                }
+                overwriteCSV(storage); // Write changes to file
+            }
+        });
+        pList.getColumns().add(cityCol);
+
+        //same as above, but for postal code
+        TableColumn<Contact,String> postCol = new TableColumn<Contact, String>("Postal Codes");
+        postCol.setCellValueFactory(new PropertyValueFactory<>("postalCode"));
+        postCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        postCol.setStyle("-fx-background-color: #90" + numtoHex((blue+20*storage.size())%255) + numtoHex((greed-20*storage.size())%255));
+        postCol.setOnEditCommit(event -> {
+            if(event.getNewValue().contains(",")){
+                postCol.setText(event.getOldValue());
+            }
+            else {
+                //we love repetition so why not
+                if(postCheck(event.getNewValue())) {
+                    Contact newContact = event.getRowValue();
+                    for (Contact a : storage) {
+                        if (a.equals(newContact)) {
+                            //quick check to make sure that it is a valid postal code format
+                            if (postCheck(event.getNewValue())) {
+                                a.setPostalCode(event.getNewValue());
+                            } else {
+                                a.setPostalCode("Invalid Code");
+                            }
+                        }
+                    }
+                    overwriteCSV(storage); // Write changes to file
+                }
+                else{
+                    System.out.println("Invalid Format");
+                }
+            }
+        });
+        pList.getColumns().add(postCol);
+
+        //for num col now
+        TableColumn<Contact,String> numCol = new TableColumn<Contact, String>("Numbers");
+        numCol.setCellValueFactory(new PropertyValueFactory<>("number"));
+        numCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        numCol.setStyle("-fx-background-color: #B0" + numtoHex((blue+20*storage.size())%255) + numtoHex((greed-20*storage.size())%255));
+        numCol.setOnEditCommit(event -> {
+            if(event.getNewValue().contains(",")){
+                numCol.setText(event.getOldValue());
+            }
+            else {
+                //code to get a whole bunch of strings if valid input is given and moving it into the correct format
+                Contact newContact = event.getRowValue();
+                for (Contact a : storage) {
+                    if (a.equals(newContact)) {
+                        String temp = event.getNewValue();
+                        //turns the new value into a string array
+                        a.setNumbers(numbertoNumbers(temp));
+                        //turns that string array into numbers, with the incorrectly formatted ones being edited out
+                        a.setNumber(numbersToNumber(a.getNumbers()));
+                    }
+                }
+                overwriteCSV(storage); // Write changes to file
+            }
+        });
+        pList.getColumns().add(numCol);
+        //for note col
+        TableColumn<Contact,String> noteCol = new TableColumn<Contact, String>("Gossip");
+        noteCol.setCellValueFactory(new PropertyValueFactory<>("notes"));
+        noteCol.setCellFactory(TextFieldTableCell.forTableColumn());
+        //cool colour changing based upon number of contacts
+        noteCol.setStyle("-fx-background-color: #F0" + numtoHex((blue+20*storage.size())%255) + numtoHex((greed-20*storage.size())%255));
+
+        noteCol.setOnEditCommit(event -> {
+            if (event.getNewValue().contains(",")){
+                noteCol.setText(event.getOldValue());
+
+            }
+            else {
+                Contact newContact = event.getRowValue();
+                for (Contact a : storage) {
+                    if (a.equals(newContact)) {
+                        a.setNotes(event.getNewValue());
+                    }
+                }
+                overwriteCSV(storage); // Write changes to file
+            }
+        });
+        pList.getColumns().add(noteCol);
+        // the intersting colour changing thing
+        TableColumn<Contact, String> customColour = new TableColumn<>("Special Colour");
+        customColour.setCellValueFactory(new PropertyValueFactory<>(""));
+        customColour.setCellFactory(TextFieldTableCell.forTableColumn());
+        System.out.println("" + (blue* storage.size()) + (greed/storage.size()));
+        customColour.setStyle("-fx-background-color: #00" + numtoHex((blue+20*storage.size())%255) + numtoHex((greed-20*storage.size())%255));
+        pList.getColumns().add(customColour);
+        // basic things to make sure things show up
+        Pane home = new Pane();
+        Scene homeScreen = new Scene(home, 800, 600);
+        homeScreen.setFill(Color.GREEN);
+
+        //button to go to the add contact screen
+        Button addContact = new Button();
+        addContact.setLayoutX(100);
+        addContact.setLayoutY(450);
+        addContact.setPrefSize(100,100);
+        addContact.setText("ADD FRIENDS");
+        home.getChildren().add(addContact);
+        //listener for button click
+        addContact.setOnAction(event -> {
+            try {
+                //switching stages
+                add(stage);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        //button to go to the remove contact screen
+        Button removeContact = new Button();
+        removeContact.setLayoutX(300);
+        removeContact.setLayoutY(450);
+        removeContact.setPrefSize(100,100);
+        removeContact.setText("REMOVE ENEMIES");
+        home.getChildren().add(removeContact);
+        //listener to go to the remove screen
+        removeContact.setOnAction(event -> {
+            try {
+                remove(stage);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+
+        });
+        // little things with the scene and tableview
+        stage.setScene(homeScreen);
+        home.getChildren().add(pList);
+        stage.show();
+
+    }
+
+    /**
+     * starts the add button screen
+     * @param addNew
+     * @throws IOException
+     */
+    public void add(Stage addNew) throws IOException {
+        //the add new pane/Scene
+        Pane addF = new Pane();
+        Scene addFriends = new Scene(addF,800,600);
+
+        //a whole bunch of text fields, used to collect user input
+        TextField name = new TextField();
+        name.setPrefSize(100,30);
+        name.setLayoutX(100);
+        name.setLayoutY(50);
+        name.setText("Name");
+        // quick thing so i can't get bombed by commas, which would screw up the csv file.
+        name.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue.contains(",")) {
+                name.setText(oldValue);
+            }
+        });
+        //adds it to the scene
+        addF.getChildren().add(name);
+
+
+        //same as above, but for address
+        TextField address = new TextField();
+        address.setPrefSize(100,30);
+        address.setLayoutX(100);
+        address.setLayoutY(150);
+        address.setText("Address");
+        address.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue.contains(",")) {
+                address.setText(oldValue);
+            }
+        });
+        addF.getChildren().add(address);
+        //same for postalCode
+        TextField postalCode = new TextField();
+        postalCode.setPrefSize(100,30);
+        postalCode.setLayoutX(100);
+        postalCode.setLayoutY(250);
+        postalCode.setText("Postal Code");
+        postalCode.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue.contains(",")) {
+                postalCode.setText(oldValue);
+            }
+        });
+        addF.getChildren().add(postalCode);
+
+        //same for number
+        TextField number = new TextField();
+        Text numberWarn = new Text(100,30,"Seperate Numbers must be seperated by #, and no spaces");
+        numberWarn.setLayoutX(250);
+        numberWarn.setLayoutY(350);
+        number.setPrefSize(100,30);
+        number.setLayoutX(100);
+        number.setLayoutY(350);
+        number.setText("Numbers");
+        number.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue.contains(",")) {
+                number.setText(oldValue);
+            }
+        });
+        addF.getChildren().add(number);
+        addF.getChildren().add(numberWarn);
+        //here for notes.
+        TextField notes = new TextField();
+        notes.setPrefSize(200,100);
+        notes.setLayoutX(400);
+        notes.setLayoutY(200);
+        notes.setText("Tea");
+        notes.textProperty().addListener((observable, oldValue, newValue) -> {
+            if (newValue.contains(",")) {
+                notes.setText(oldValue);
+            }
+        });
+        addF.getChildren().add(notes);
+
+        //creating an end button, which will add the contact.
+        Button end = new Button();
+        end.setPrefSize(100,100);
+        end.setLayoutX(200);
+        end.setLayoutY(400);
+        end.setText("Add the Contact");
+        addF.getChildren().add(end);
+        //listener to action
+        end.setOnAction(event -> {
+            //temporary variables to hold datapoints
+            String tempName = name.getText();
+            String tempAddress = address.getText();
+            String tempPost = postalCode.getText();
+            String tempNum = number.getText();
+            String tempNotes = notes.getText();
+            Contact a = new Contact();
+            // variables with no constraints
+            a.setName(tempName);
+            a.setAddress(tempAddress);
+            a.setNotes(tempNotes);
+            //postal code check to make sure it has correct formatting
+            if(!(postCheck(tempPost))){
+                a.setPostalCode("");
+            }
+            else{
+                a.setPostalCode(tempPost);
+            }
+            //turns one big string of numbers into an arraylist of numbers
+            a.setNumbers(numbertoNumbers(tempNum));
+            //found this because its easy to edit strings with it
+            StringBuilder temp = new StringBuilder();
+            //adds all the strings into a numbers string, and adds the or between it
+            for(String b: a.getNumbers()){
+                if(b.length()==10 && numCheck(b)) {
+                    temp.append(b).append(" or ");
+                }
+            }
+            //if the string is at least one long, get rid of the or at the very end
+            if(temp.toString().contains("or")) {
+                temp.delete(temp.length() - 4, temp.length());
+            }
+            //set the number to the value, with a string datatype
+            a.setNumber(String.valueOf(temp));
+
+            //adding new contact to global storage
+            storage.add(a);
+            //editing the CSV file
+            overwriteCSV(storage);
+            //return back to the old screen
+            start(addNew);
+        });
+
+        //exit button to exit without adding
+        Button exit = new Button();
+        exit.setPrefSize(100,100);
+        exit.setLayoutX(300);
+        exit.setLayoutY(400);
+        exit.setText("Exit Without Adding");
+        addF.getChildren().add(exit);
+
+        addNew.setScene(addFriends);
+        //just exits
+        exit.setOnAction(event -> {
+            start(addNew);
+        });
+    }
+
+    /**
+     * starts the remove button screen
+     * @param removeOld
+     * @throws IOException
+     */
+    public void remove(Stage removeOld) throws IOException{
+        //some stuff
+        Pane remF = new Pane();
+        Scene removeF = new Scene(remF, 800,600);
+        //textfield to hold the name of the to be removed
+        TextField toRemove = new TextField("Name of the to be Removed");
+        toRemove.setLayoutX(350);
+        toRemove.setLayoutY(200);
+        toRemove.setPrefSize(200,40);
+        remF.getChildren().add(toRemove);
+        //actually does the deed
+        Button removeFin = new Button("Remove Enemy");
+        removeFin.setLayoutX(200);
+        removeFin.setLayoutY(400);
+        removeFin.setPrefSize(100,100);
+        remF.getChildren().add(removeFin);
+
+        removeFin.setOnAction(event -> {
+            //gets input from the textfield
+            String remName = toRemove.getText();
+            //finds the matching name
+            int indexOfRemovee = findtheMatch(remName);
+            //if a valid index then fuck it up
+            if(indexOfRemovee > -1){
+                //removes and saves changes
+                storage.remove(indexOfRemovee);
+                overwriteCSV(storage);
+                start(removeOld);
+            }
+            else{
+                // the you fucked up text
+                toRemove.setText("No such Contact Exists");
+            }
+
+        } );
+        //kinda self explanantory
+        Button remExit = new Button("Exit without Remove");
+        remExit.setLayoutX(400);
+        remExit.setLayoutY(400);
+        remExit.setPrefSize(100,100);
+        remF.getChildren().add(remExit);
+
+        remExit.setOnAction( event -> {
+            start(removeOld);
+        });
+        removeOld.setScene(removeF);
+    }
+
+    /**
+     * Returns the index of the matching name, if it exists
+     * @param a
+     */
+    public static int findtheMatch(String a){
+        //loop to run the entire storage array
+        for (int i = storage.size()-1; i >=0; i--) {
+            //if the names match
+            if(storage.get(i).getName().equals(a)){
+                //return index of the name
+                return i;
+            }
+        }
+        //else return -1
+        return -1;
+    }
+
+    /**
+     * Takes in an arraylist, and writes it to the CSV file using BufferedWriter
+     * @param a
+     */
+    private static void overwriteCSV( ArrayList <Contact> a) {
+        //uses bufferedWriter because i'm not sure a Scanner can edit files
+        try (BufferedWriter bw = new BufferedWriter(new FileWriter("/Users/robmuranaka/IdeaProjects/contacts/src/main/java/com/example/contacts/contactStorage"))) {
+            for (Contact b : a) {
+                //loops through the arraylist, and gets each individual contact
+                String fullLine = b.getName() + "," + b.getAddress() + "," + b.getPostalCode() + "," + b.getNumber() + "," + b.getNotes();
+                //writes the string into the file
+                bw.write(fullLine);
+                //goes to a new line
+                bw.newLine();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * Turns an byte into a hex code number
+     * @param a one section of an RGB value
+     * @return  returns two chars in the form of hexcode values
+     */
+    private static String numtoHex(int a){
+        //math to turn an int into two parts of a hex code
+        a = Math.abs(a);
+        String tobeReturned = "";
+        int b = a/16;
+        int c = a%16;
+        tobeReturned = bigSwitch(b) + bigSwitch(c);
+
+        return tobeReturned;
+    }
+
+    /**
+     * big switch to turn int values into char values for a hex code
+     * @param a integer number from 0 to 15
+     * @return  the appopriate hexidecimal value, or 0 if invalid.
+     */
+    private static String bigSwitch(int a){
+        //enhanced switch, suggested by IntelliJ, looks cool.
+        return switch (a) {
+            case 1 -> "1";
+            case 2 -> "2";
+            case 3 -> "3";
+            case 4 -> "4";
+            case 5 -> "5";
+            case 6 -> "6";
+            case 7 -> "7";
+            case 8 -> "8";
+            case 9 -> "9";
+            case 10 -> "A";
+            case 11 -> "B";
+            case 12 -> "C";
+            case 13 -> "D";
+            case 14 -> "E";
+            case 15 -> "F";
+            default -> "0";
+        };
+    }
+
+    /**
+     * turns one big string with hashtags into multiple strings of numbers
+     * @param a, one big string with hashtags seperating values
+     * @return an arraylist containing all of the numbers
+     */
+    private static ArrayList <String> numbertoNumbers(String a){
+        //takes a big string, seperates the numbers by hashtags, and sends them into the arraylist
+        ArrayList <String> b = new ArrayList<>();
+        int temp;
+        String temp1;
+        String temp2;
+        //loop to run while a hashtag is stil in the numbers
+        while(a.contains("#")){
+            temp = a.indexOf("#");
+            temp1 = a.substring(0,temp);
+            //used temp+1 to omit the hashtag in the next string
+            temp2 = a.substring(temp + 1);
+            a = temp2;
+            b.add(temp1);
+        }
+        b.add(a);
+        return b;
+    }
+
+    /**
+     * checks if the string input is a valid postal code, otherwise returns false
+     * @param a some string
+     * @return true or false
+     */
+    public static boolean postCheck(String a){
+        //makes sure it alternates between capital letters and numbers
+        for(int b = 0; b<a.length();b++){
+            if(b%2 == 0){
+                if(!((a.charAt(b)>= 65)&&(a.charAt(b)<=90))){
+                    return false;
+                }
+            }
+            else {
+                if(!((a.charAt(b)>= 48)&&(a.charAt(b)<=57))){
+                    return false;
+                }
+            }
+        }
+        //make sure its the proper length
+        if(a.length()!= 6){
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * checks if the string inputtes is a valid phone number (ten digits, all numeric)
+     * @param a
+     * @return
+     */
+    public static boolean numCheck(String a){
+        for(int i = 0; i<a.length();i++){
+            char b = a.charAt(i);
+           if((b<48)||(b>57)){
+               return false;
+           }
+        }
+        if (a.length()!=10){
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * read the method name, turns an array of numbers into one big string
+     * @param a arraylist full of numbers
+     * @return one big string,
+     */
+    public static String numbersToNumber(ArrayList<String> a){
+        StringBuilder temp = new StringBuilder();
+        //adds all the strings into a numbers string, and adds the or between it
+        for(String b: a){
+            if(b.length()==10 && numCheck(b)) {
+                temp.append(b).append(" or ");
+            }
+        }
+        //if the string is at least one long, get rid of the or at the very end
+        if(temp.toString().contains("or")) {
+            temp.delete(temp.length() - 4, temp.length());
+        }
+        return temp.toString();
+    }
+
+}
